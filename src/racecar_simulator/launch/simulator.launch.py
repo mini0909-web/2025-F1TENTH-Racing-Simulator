@@ -1,0 +1,183 @@
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.substitutions import Command
+from launch_ros.parameter_descriptions import ParameterValue
+from ament_index_python.packages import get_package_share_directory
+import os
+
+def generate_launch_description():
+
+    ld = LaunchDescription()
+
+    pkg_dir = '/home/user/racecar_simulator/src/racecar_simulator/'
+
+
+    map_name = "iccas2025"
+
+    # 1. Austin
+    # 2. Melbourne
+    # 3. Oschersleben
+    # 4. Shanghai
+    # 5. Zandvoort
+    # 6. BrandsHatch
+    # 7. MexicoCity
+    # 8. Silverstone
+    # 9. Budapest
+    # 10. IMS
+    # 11. Montreal
+    # 12. Sochi
+    # 13. Catalunya
+    # 14. Monza
+    # 15. Sakhir
+    # 16. Spa
+    # 17. MoscowRaceway
+    # 18. SaoPaulo
+    # 19. Spielberg
+    # 20. Hockenheim
+    # 21. Nuerburgring
+    # 22. Sepang
+    # 23. YasMarina
+
+    rviz_config_file = os.path.join(pkg_dir, "params", "simulator.rviz")
+    simulation_config_file = os.path.join(pkg_dir, "params", "simulation.yaml")
+    race_stat_config_file = os.path.join(pkg_dir, "params", "race_stats.yaml")
+    map_folder = os.path.join(pkg_dir, "maps/f1tenth_racetracks")
+    # map_img = os.path.join(map_folder, map_name, map_name + "_map.png")
+    map_img = os.path.join(map_folder, map_name, map_name + "_map.pgm")
+    map_yaml = os.path.join(map_folder, map_name, map_name + "_map.yaml")
+    map_center = os.path.join(map_folder, map_name, map_name + "_centerline.csv")
+    map_racing_profile = os.path.join(map_folder, map_name, map_name + "_racing_profile.csv")
+
+
+    car0_xacro_file = os.path.join(pkg_dir, "params", "racecar0.xacro")
+    car1_xacro_file = os.path.join(pkg_dir, "params", "racecar1.xacro")
+
+    robot0_state_publisher_node = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        namespace="racecar0",
+        output="screen",
+        parameters=[
+            {
+                "robot_description": ParameterValue(
+                    Command(["xacro ", str(car0_xacro_file), " prefix:=0"]), value_type=str
+                ),
+                # "use_sim_time": True
+            }
+        ],
+    )
+
+    # robot1_state_publisher_node = Node(
+    #     package="robot_state_publisher",
+    #     executable="robot_state_publisher",
+    #     name="robot_state_publisher",
+    #     namespace="racecar1",
+    #     output="screen",
+    #     parameters=[
+    #         {
+    #             "robot_description": ParameterValue(
+    #                 Command(["xacro ", str(car1_xacro_file), " prefix:=1"]), value_type=str
+    #             ),
+    #             # "use_sim_time": True
+    #         }
+    #     ],
+    # )
+
+    racecar_node = Node(
+        package="racecar_simulator",
+        executable="simulator",
+        name="racecar_simulator",
+        output="screen",
+        parameters=[
+            simulation_config_file,
+            # {"use_sim_time": True},   
+        ],
+    )
+
+    map_publisher_node = Node(
+        package="racecar_simulator",
+        executable="map_publisher",
+        name="map_publisher",
+        output="screen",
+        parameters=[
+            {"map_img_file_path": map_img},
+            {"map_yaml_file_path": map_yaml},
+            {"race_line_file_path": map_center},
+        ],
+    )
+
+    rviz_node = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", rviz_config_file],
+        output="screen",
+        # parameters=[{"use_sim_time": True}],
+    )
+
+    racecar_stat_node = Node(
+        package="racecar_simulator",
+        executable="race_stat",
+        name="race_stat",
+        output="screen",
+        parameters=[
+            race_stat_config_file,
+        ],
+    )
+
+    racing_line_node = Node(
+        package="pure_pursuit",
+        executable="racing_line_publisher",
+        name="racing_line_publisher",
+        output="screen",
+        parameters=[
+            {"racing_line_csv": map_racing_profile},
+            {"frame_id": "map"},
+            {"local_path_topic": "local_path"},
+            {"left_boundary_topic": "racing_left"},
+            {"right_boundary_topic": "racing_right"},
+            {"speed_profile_topic": "speed_profile"},
+        ],
+    )
+
+    pure_pursuit_node = Node(
+        package="pure_pursuit",
+        executable="pure_pursuit_node",
+        name="pure_pursuit_node",
+        output="screen",
+        parameters=[
+            {"local_path_topic": "local_path"},
+            {"left_boundary": "racing_left"},
+            {"right_boundary": "racing_right"},
+            {"odom_topic": "odom0"},
+            {"drive_topic": "ackermann_cmd0"},
+            {"speed_profile_topic": "speed_profile"},
+        ],
+    )
+
+    obstacle_perception_node = Node(
+        package="perception_dbscan",
+        executable="perception_dbscan_node",
+        name="perception_dbscan_node",
+        output="screen",
+    )
+
+    obstacle_decision_node = Node(
+        package="decision_ftg",
+        executable="decision_ftg_node",
+        name="decision_ftg_node",
+        output="screen",
+    )
+
+    ld.add_action(rviz_node)
+    ld.add_action(racecar_node)
+    ld.add_action(map_publisher_node)
+    ld.add_action(robot0_state_publisher_node)
+    ld.add_action(racecar_stat_node)
+    ld.add_action(racing_line_node)
+    ld.add_action(obstacle_perception_node)
+    ld.add_action(obstacle_decision_node)
+    # ld.add_action(robot1_state_publisher_node)
+
+    return ld

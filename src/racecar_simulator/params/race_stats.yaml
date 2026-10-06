@@ -1,0 +1,27 @@
+race_stat:
+  ros__parameters:
+    # Topics
+    odom_topic: "odom0"
+    collision_topic: "collision0"
+    path_topic: "center_path"
+    cmd_topic: "ackermann_cmd0"
+
+    # Frames / HUD
+    text_frame: "map"
+    fixed_frame: "map"
+    text_anchor_x: -8.0
+    text_anchor_y: 10.0
+    text_scale: 0.5
+
+    # Lap timing behavior
+    start_on_first_cross: true
+
+    # Debounce / timing
+    min_lap_time: 1.0          
+    eval_duration_sec: 180.0   
+
+    # SF crossing
+    sf_radius: 1.5            
+
+    # Node rate
+    update_rate_hz: 50.0
