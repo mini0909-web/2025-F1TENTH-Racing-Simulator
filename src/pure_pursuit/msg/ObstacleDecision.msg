@@ -1,0 +1,5 @@
+std_msgs/Header header
+float64 speed_scale
+float64 lateral_offset
+float64 steering_bias
+bool obstacle_active
